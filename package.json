@@ -10,17 +10,17 @@
     "node": ">=6"
   },
   "scripts": {
-    "clean": "rm -rf coverage .nyc_output/",
+    "clean": "rm -rf coverage",
     "lint": "standard *.js examples/*.js",
     "pretest": "npm run lint",
     "test": "tape test.js",
-    "coverage": "nyc -r html npm test"
+    "coverage": "c8 -r html npm test"
   },
   "dependencies": {
     "@leichtgewicht/ip-codec": "^2.0.1"
   },
   "devDependencies": {
-    "nyc": "^13.3.0",
+    "c8": "^7.11.2",
     "standard": "^17.0.0",
     "tape": "^4.10.1"
   },
