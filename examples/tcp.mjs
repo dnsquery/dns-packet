@@ -1,7 +1,5 @@
-'use strict'
-
-const dnsPacket = require('..')
-const net = require('net')
+import * as dnsPacket from '../index.mjs'
+import net from 'net'
 
 let response = null
 let expectedLength = 0

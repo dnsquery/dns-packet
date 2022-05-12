@@ -1,6 +1,4 @@
-'use strict'
-
-exports.toString = function (type) {
+export function toString (type) {
   switch (type) {
     // list at
     // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-11
@@ -25,7 +23,7 @@ exports.toString = function (type) {
   return `OPTION_${type}`
 }
 
-exports.toCode = function (name) {
+export function toCode (name) {
   if (typeof name === 'number') {
     return name
   }

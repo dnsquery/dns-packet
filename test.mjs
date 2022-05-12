@@ -1,10 +1,8 @@
-'use strict'
-
-const tape = require('tape')
-const packet = require('./')
-const rcodes = require('./rcodes')
-const opcodes = require('./opcodes')
-const optioncodes = require('./optioncodes')
+import tape from 'tape'
+import * as packet from './index.mjs'
+import * as rcodes from './rcodes.mjs'
+import * as opcodes from './opcodes.mjs'
+import * as optioncodes from './optioncodes.mjs'
 
 tape('unknown', function (t) {
   testEncoder(t, packet.unknown, Buffer.from('hello world'))

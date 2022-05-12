@@ -6,14 +6,15 @@
   "license": "MIT",
   "repository": "mafintosh/dns-packet",
   "homepage": "https://github.com/mafintosh/dns-packet",
+  "main": "./index.mjs",
   "engines": {
     "node": ">=6"
   },
   "scripts": {
     "clean": "rm -rf coverage",
-    "lint": "standard *.js examples/*.js",
-    "pretest": "npm run lint",
-    "test": "tape test.js",
+    "lint": "standard",
+    "test": "npm run lint && npm run unit",
+    "unit": "tape test.mjs",
     "coverage": "c8 -r html npm test"
   },
   "dependencies": {
@@ -33,11 +34,11 @@
     "abstract-encoding"
   ],
   "files": [
-    "index.js",
-    "types.js",
-    "rcodes.js",
-    "opcodes.js",
-    "classes.js",
-    "optioncodes.js"
+    "index.mjs",
+    "types.mjs",
+    "rcodes.mjs",
+    "opcodes.mjs",
+    "classes.mjs",
+    "optioncodes.mjs"
   ]
 }

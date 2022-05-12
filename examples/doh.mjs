@@ -1,6 +1,3 @@
-
-'use strict'
-
 /*
  * Sample code to make DNS over HTTPS request using POST
  * AUTHOR: Tom Pusateri <pusateri@bangj.com>
@@ -8,8 +5,8 @@
  * LICENSE: MIT
  */
 
-const dnsPacket = require('..')
-const https = require('https')
+import * as dnsPacket from '../index.mjs'
+import https from 'https'
 
 function getRandomInt (min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min

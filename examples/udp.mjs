@@ -1,7 +1,5 @@
-'use strict'
-
-const dnsPacket = require('..')
-const dgram = require('dgram')
+import * as dnsPacket from '../index.mjs'
+import dgram from 'dgram'
 
 const socket = dgram.createSocket('udp4')
 

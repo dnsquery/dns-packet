@@ -10,8 +10,8 @@ npm install dns-packet
 ## UDP Usage
 
 ``` js
-const dnsPacket = require('dns-packet')
-const dgram = require('dgram')
+import * as dnsPacket from 'dns-packet'
+import dgram from 'dgram'
 
 const socket = dgram.createSocket('udp4')
 

@@ -1,7 +1,5 @@
-'use strict'
-
-const tls = require('tls')
-const dnsPacket = require('..')
+import * as dnsPacket from '../index.mjs'
+import tls from 'tls'
 
 let response = null
 let expectedLength = 0
