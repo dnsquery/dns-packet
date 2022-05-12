@@ -1,8 +1,8 @@
 import tape from 'tape'
-import * as packet from './index.mjs'
-import * as rcodes from './rcodes.mjs'
-import * as opcodes from './opcodes.mjs'
-import * as optioncodes from './optioncodes.mjs'
+import * as packet from 'dns-packet'
+import * as rcodes from 'dns-packet/rcodes.js'
+import * as opcodes from 'dns-packet/opcodes.js'
+import * as optioncodes from 'dns-packet/optioncodes.js'
 
 tape('unknown', function (t) {
   testEncoder(t, packet.unknown, Buffer.from('hello world'))

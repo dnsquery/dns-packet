@@ -1,0 +1,4 @@
+coverage
+.github
+*.tgz
+scripts
