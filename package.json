@@ -6,7 +6,33 @@
   "license": "MIT",
   "repository": "mafintosh/dns-packet",
   "homepage": "https://github.com/mafintosh/dns-packet",
-  "main": "./index.mjs",
+  "main": "./index.cjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    },
+    "./classes.js": {
+      "import": "./classes.mjs",
+      "require": "./classes.cjs"
+    },
+    "./opcodes.js": {
+      "import": "./opcodes.mjs",
+      "require": "./opcodes.cjs"
+    },
+    "./optioncodes.js": {
+      "import": "./optioncodes.mjs",
+      "require": "./optioncodes.cjs"
+    },
+    "./rcodes.js": {
+      "import": "./rcodes.mjs",
+      "require": "./rcodes.cjs"
+    },
+    "./types.js": {
+      "import": "./types.mjs",
+      "require": "./types.cjs"
+    }
+  },
   "engines": {
     "node": ">=6"
   },
@@ -15,13 +41,15 @@
     "lint": "standard",
     "test": "npm run lint && npm run unit",
     "unit": "tape test.mjs",
-    "coverage": "c8 -r html npm test"
+    "coverage": "c8 -r html npm test",
+    "prepare": "node ./scripts/esm2umd.mjs dnsPacket"
   },
   "dependencies": {
     "@leichtgewicht/ip-codec": "^2.0.4"
   },
   "devDependencies": {
     "c8": "^7.11.2",
+    "esm2umd": "^0.2.0",
     "standard": "^17.0.0",
     "tape": "^5.5.3"
   },
@@ -32,13 +60,5 @@
     "encoding",
     "encoder",
     "abstract-encoding"
-  ],
-  "files": [
-    "index.mjs",
-    "types.mjs",
-    "rcodes.mjs",
-    "opcodes.mjs",
-    "classes.mjs",
-    "optioncodes.mjs"
   ]
 }

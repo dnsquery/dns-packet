@@ -1,10 +1,10 @@
 import { Buffer } from 'buffer'
 import * as ip from '@leichtgewicht/ip-codec'
-import * as types from './types.mjs'
-import * as rcodes from './rcodes.mjs'
-import * as opcodes from './opcodes.mjs'
-import * as classes from './classes.mjs'
-import * as optioncodes from './optioncodes.mjs'
+import * as types from 'dns-packet/types.js'
+import * as rcodes from 'dns-packet/rcodes.js'
+import * as opcodes from 'dns-packet/opcodes.js'
+import * as classes from 'dns-packet/classes.js'
+import * as optioncodes from 'dns-packet/optioncodes.js'
 
 const QUERY_FLAG = 0
 const RESPONSE_FLAG = 1 << 15
