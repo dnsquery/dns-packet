@@ -1,4 +1,4 @@
-import * as dnsPacket from '../index.mjs'
+import * as dnsPacket from 'dns-packet'
 import net from 'net'
 
 let response = null

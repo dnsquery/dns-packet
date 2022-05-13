@@ -1,4 +1,4 @@
-import * as dnsPacket from '../index.mjs'
+import * as dnsPacket from 'dns-packet'
 import dgram from 'dgram'
 
 const socket = dgram.createSocket('udp4')
