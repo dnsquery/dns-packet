@@ -1,4 +1,4 @@
-import * as dnsPacket from 'dns-packet'
+import * as dnsPacket from '@leichtgewicht/dns-packet'
 import tls from 'tls'
 
 let response = null

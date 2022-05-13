@@ -5,7 +5,7 @@
  * LICENSE: MIT
  */
 
-import * as dnsPacket from 'dns-packet'
+import * as dnsPacket from '@leichtgewicht/dns-packet'
 import https from 'https'
 
 function getRandomInt (min, max) {

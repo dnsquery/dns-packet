@@ -1,10 +1,10 @@
 import { Buffer } from 'buffer'
 import * as ip from '@leichtgewicht/ip-codec'
-import * as types from 'dns-packet/types.js'
-import * as rcodes from 'dns-packet/rcodes.js'
-import * as opcodes from 'dns-packet/opcodes.js'
-import * as classes from 'dns-packet/classes.js'
-import * as optioncodes from 'dns-packet/optioncodes.js'
+import * as types from '@leichtgewicht/dns-packet/types.js'
+import * as rcodes from '@leichtgewicht/dns-packet/rcodes.js'
+import * as opcodes from '@leichtgewicht/dns-packet/opcodes.js'
+import * as classes from '@leichtgewicht/dns-packet/classes.js'
+import * as optioncodes from '@leichtgewicht/dns-packet/optioncodes.js'
 
 const QUERY_FLAG = 0
 const RESPONSE_FLAG = 1 << 15

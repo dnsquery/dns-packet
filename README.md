@@ -1,16 +1,16 @@
 # dns-packet
-[![](https://img.shields.io/npm/v/dns-packet.svg?style=flat)](https://www.npmjs.org/package/dns-packet) [![](https://img.shields.io/npm/dm/dns-packet.svg)](https://www.npmjs.org/package/dns-packet) [![](https://api.travis-ci.org/mafintosh/dns-packet.svg?style=flat)](https://travis-ci.org/mafintosh/dns-packet) [![Coverage Status](https://coveralls.io/repos/github/mafintosh/dns-packet/badge.svg?branch=master)](https://coveralls.io/github/mafintosh/dns-packet?branch=master)
+[![](https://img.shields.io/npm/v/@leichtgewicht/dns-packet.svg?style=flat)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![](https://img.shields.io/npm/dm/@leichtgewicht/dns-packet.svg)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![Tests](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml/badge.svg)](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml)
 
 An [abstract-encoding](https://github.com/mafintosh/abstract-encoding) compliant module for encoding / decoding DNS packets. Lifted out of [multicast-dns](https://github.com/mafintosh/multicast-dns) as a separate module.
 
 ```
-npm install dns-packet
+npm install @leichtgewicht/dns-packet
 ```
 
 ## UDP Usage
 
 ``` js
-import * as dnsPacket from 'dns-packet'
+import * as dnsPacket from '@leichtgewicht/dns-packet'
 import dgram from 'dgram'
 
 const socket = dgram.createSocket('udp4')
@@ -83,12 +83,14 @@ Packets look like this
 The bit flags available are
 
 ``` js
-packet.RECURSION_DESIRED
-packet.RECURSION_AVAILABLE
-packet.TRUNCATED_RESPONSE
-packet.AUTHORITATIVE_ANSWER
-packet.AUTHENTIC_DATA
-packet.CHECKING_DISABLED
+import {
+  RECURSION_DESIRED,
+  RECURSION_AVAILABLE,
+  TRUNCATED_RESPONSE,
+  AUTHORITATIVE_ANSWER,
+  AUTHENTIC_DATA,
+  CHECKING_DISABLED
+} from '@leichtgewicht/dns-packet'
 ```
 
 To use more than one flag bitwise-or them together
