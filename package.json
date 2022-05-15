@@ -42,14 +42,14 @@
     "test": "npm run lint && npm run unit",
     "unit": "tape test.mjs",
     "coverage": "c8 -r html npm test",
-    "prepare": "node ./scripts/esm2umd.mjs dnsPacket"
+    "prepare": "npx @leichtgewicht/esm2umd"
   },
   "dependencies": {
     "@leichtgewicht/ip-codec": "^2.0.4"
   },
   "devDependencies": {
+    "@leichtgewicht/esm2umd": "^0.1.1",
     "c8": "^7.11.2",
-    "esm2umd": "^0.2.0",
     "standard": "^17.0.0",
     "tape": "^5.5.3"
   },
