@@ -175,7 +175,7 @@ const header = codec({
   }
 })
 
-export const runknown = codec({
+const runknown = codec({
   encode (data, buf, offset) {
     if (!buf) buf = Buffer.alloc(runknown.encodingLength(data))
     if (!offset) offset = 0
@@ -199,7 +199,7 @@ export const runknown = codec({
   }
 })
 
-export const rns = codec({
+const rns = codec({
   encode (data, buf, offset) {
     if (!buf) buf = Buffer.alloc(rns.encodingLength(data))
     if (!offset) offset = 0
