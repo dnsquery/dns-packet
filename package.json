@@ -1,6 +1,6 @@
 {
   "name": "@leichtgewicht/dns-packet",
-  "version": "5.3.2",
+  "version": "5.3.3",
   "description": "An abstract-encoding compliant module for encoding / decoding DNS packets",
   "author": "Mathias Buus",
   "license": "MIT",
