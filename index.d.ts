@@ -219,6 +219,14 @@ export type RRSigCodec = Codec<RRSigData>;
 export type RPCodec = Codec<RPData>;
 export type NSecCodec = Codec<NSecData>;
 export type NSec3Codec = Codec<NSec3Data>;
+export type PacketCodec = Codec<Packet>;
+
+export type SingleQuestionPacket = Omit<Packet, 'questions'> & {
+  question: Question
+}
+
+export type QueryCodec = Codec<SingleQuestionPacket>;
+export type ResponseCodec = Codec<SingleQuestionPacket>;
 
 export const a: ACodec;
 export const caa: CaaCodec;
@@ -244,6 +252,9 @@ export const rrsig: RRSigCodec;
 export const rp: RPCodec;
 export const nsec: NSecCodec;
 export const nsec3: NSec3Codec;
+export const packet: PacketCodec;
+export const query: QueryCodec;
+export const response: ResponseCodec;
 
 declare const rnull: NullCodec;
 export { rnull as null };
