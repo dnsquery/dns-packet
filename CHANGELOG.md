@@ -1,3 +1,8 @@
+# Version 5.4.0 - 2022-06-27
+
+- Feature: Adding dedicated packet codec
+- Feature: Adding dedicated query/response codec as multiple queries are only theoretically supported.
+
 # Version 5.3.0 - 2022-06-22
 
 - Refactor: ESM module support
