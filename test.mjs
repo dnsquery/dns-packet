@@ -609,6 +609,80 @@ tape('optioncodes', function (t) {
   t.end()
 })
 
+tape('packet exported codec', function (t) {
+  const input = {
+    type: 'query',
+    questions: [{
+      type: 'A',
+      name: 'hello.a.com',
+      class: 'IN'
+    }]
+  }
+  packet.encode.bytes = 0
+  t.equals(packet.packet.encode.bytes, 0)
+  t.equals(packet.packet.encode.bytes, packet.encode.bytes)
+  const buf = packet.packet.encode(input)
+  t.equals(packet.packet.encode.bytes, 29)
+  t.equals(packet.packet.encode.bytes, packet.encode.bytes)
+  t.deepEqual(
+    buf,
+    packet.encode(input)
+  )
+  packet.decode.bytes = 0
+  t.equals(packet.packet.decode.bytes, 0)
+  t.equals(packet.packet.decode.bytes, packet.decode.bytes)
+  const obj = packet.packet.decode(buf)
+  t.equals(packet.packet.decode.bytes, 29)
+  t.equals(packet.packet.decode.bytes, packet.decode.bytes)
+  t.deepEqual(
+    obj,
+    packet.decode(buf)
+  )
+  t.end()
+})
+
+tape('single query error with multiple questions', function (t) {
+  t.throws(() => {
+    packet.query.encode({
+      questions: []
+    })
+  }, /Only one .question object expected instead of a .questions array!/)
+  t.end()
+})
+
+tape('single query -> response encoding', function (t) {
+  const question = {
+    type: 'A',
+    name: 'hello.a.com',
+    class: 'IN'
+  }
+  const length = packet.query.encodingLength({ question })
+  t.equals(length, 29)
+  t.equals(packet.query.encode.bytes, 0)
+  const queryBytes = packet.query.encode({
+    question
+  })
+  const decodedQuestion = packet.decode(queryBytes)
+  t.equals(packet.query.encode.bytes, length)
+  t.equal(decodedQuestion.type, 'query')
+  t.deepEqual(decodedQuestion.questions, [question])
+  t.equals(packet.query.decode.bytes, 0)
+  decodedQuestion.question = decodedQuestion.questions[0]
+  delete decodedQuestion.questions
+
+  t.deepEqual(packet.query.decode(queryBytes), decodedQuestion)
+  const responseBytes = packet.encode({
+    type: 'response',
+    questions: [question]
+  })
+  const decodedResponse = packet.response.decode(responseBytes)
+  t.equal(packet.response.encodingLength(decodedResponse), length)
+  t.equals(packet.response.decode.bytes, length)
+  t.deepEqual(decodedResponse.question, question)
+  t.deepEqual(packet.response.encode(decodedResponse), responseBytes)
+  t.end()
+})
+
 function testEncoder (t, rpacket, val) {
   const buf = rpacket.encode(val)
   const val2 = rpacket.decode(buf)

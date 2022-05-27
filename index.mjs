@@ -1344,63 +1344,125 @@ export const AUTHENTIC_DATA = 1 << 5
 export const CHECKING_DISABLED = 1 << 4
 export const DNSSEC_OK = 1 << 15
 
-export function encode (result, buf, offset) {
-  const allocing = !buf
+export const packet = {
+  encode: function (result, buf, offset) {
+    const allocing = !buf
 
-  if (allocing) buf = Buffer.alloc(encodingLength(result))
-  if (!offset) offset = 0
+    if (allocing) buf = Buffer.alloc(encodingLength(result))
+    if (!offset) offset = 0
 
-  const oldOffset = offset
+    const oldOffset = offset
 
-  if (!result.questions) result.questions = []
-  if (!result.answers) result.answers = []
-  if (!result.authorities) result.authorities = []
-  if (!result.additionals) result.additionals = []
+    if (!result.questions) result.questions = []
+    if (!result.answers) result.answers = []
+    if (!result.authorities) result.authorities = []
+    if (!result.additionals) result.additionals = []
 
-  header.encode(result, buf, offset)
-  offset += header.encode.bytes
+    header.encode(result, buf, offset)
+    offset += header.encode.bytes
 
-  offset = encodeList(result.questions, question, buf, offset)
-  offset = encodeList(result.answers, answer, buf, offset)
-  offset = encodeList(result.authorities, answer, buf, offset)
-  offset = encodeList(result.additionals, answer, buf, offset)
+    offset = encodeList(result.questions, question, buf, offset)
+    offset = encodeList(result.answers, answer, buf, offset)
+    offset = encodeList(result.authorities, answer, buf, offset)
+    offset = encodeList(result.additionals, answer, buf, offset)
 
-  encode.bytes = offset - oldOffset
+    packet.encode.bytes = offset - oldOffset
 
-  // just a quick sanity check
-  if (allocing && encode.bytes !== buf.length) {
-    return buf.slice(0, encode.bytes)
+    // just a quick sanity check
+    if (allocing && encode.bytes !== buf.length) {
+      return buf.slice(0, encode.bytes)
+    }
+
+    return buf
+  },
+  decode: function (buf, offset) {
+    if (!offset) offset = 0
+
+    const oldOffset = offset
+    const result = header.decode(buf, offset)
+    offset += header.decode.bytes
+
+    offset = decodeList(result.questions, question, buf, offset)
+    offset = decodeList(result.answers, answer, buf, offset)
+    offset = decodeList(result.authorities, answer, buf, offset)
+    offset = decodeList(result.additionals, answer, buf, offset)
+
+    packet.decode.bytes = offset - oldOffset
+
+    return result
+  },
+  encodingLength: function (result) {
+    return header.encodingLength(result) +
+      encodingLengthList(result.questions || [], question) +
+      encodingLengthList(result.answers || [], answer) +
+      encodingLengthList(result.authorities || [], answer) +
+      encodingLengthList(result.additionals || [], answer)
   }
-
-  return buf
 }
-encode.bytes = 0
+packet.encode.bytes = 0
+packet.decode.bytes = 0
 
-export function decode (buf, offset) {
-  if (!offset) offset = 0
-
-  const oldOffset = offset
-  const result = header.decode(buf, offset)
-  offset += header.decode.bytes
-
-  offset = decodeList(result.questions, question, buf, offset)
-  offset = decodeList(result.answers, answer, buf, offset)
-  offset = decodeList(result.authorities, answer, buf, offset)
-  offset = decodeList(result.additionals, answer, buf, offset)
-
-  decode.bytes = offset - oldOffset
-
-  return result
+function sanitizeSingle (input, type) {
+  if (input.questions) {
+    throw new Error('Only one .question object expected instead of a .questions array!')
+  }
+  const sanitized = Object.assign({
+    type
+  }, input)
+  if (sanitized.question) {
+    sanitized.questions = [sanitized.question]
+    delete sanitized.question
+  }
+  return sanitized
 }
-decode.bytes = 0
 
-export function encodingLength (result) {
-  return header.encodingLength(result) +
-    encodingLengthList(result.questions || [], question) +
-    encodingLengthList(result.answers || [], answer) +
-    encodingLengthList(result.authorities || [], answer) +
-    encodingLengthList(result.additionals || [], answer)
+export const query = {
+  encode: function (result, buf, offset) {
+    buf = packet.encode(sanitizeSingle(result, 'query'), buf, offset)
+    query.encode.bytes = packet.encode.bytes
+    return buf
+  },
+  decode: function (buf, offset) {
+    const res = packet.decode(buf, offset)
+    query.decode.bytes = packet.decode.bytes
+    if (res.questions) {
+      res.question = res.questions[0]
+      delete res.questions
+    }
+    return res
+  },
+  encodingLength: function (result) {
+    return packet.encodingLength(sanitizeSingle(result, 'query'))
+  }
 }
+query.encode.bytes = 0
+query.decode.bytes = 0
+
+export const response = {
+  encode: function (result, buf, offset) {
+    buf = packet.encode(sanitizeSingle(result, 'response'), buf, offset)
+    response.encode.bytes = packet.encode.bytes
+    return buf
+  },
+  decode: function (buf, offset) {
+    const res = packet.decode(buf, offset)
+    response.decode.bytes = packet.decode.bytes
+    if (res.questions) {
+      res.question = res.questions[0]
+      delete res.questions
+    }
+    return res
+  },
+  encodingLength: function (result) {
+    return packet.encodingLength(sanitizeSingle(result, 'response'))
+  }
+}
+response.encode.bytes = 0
+response.decode.bytes = 0
+
+export const encode = packet.encode
+export const decode = packet.decode
+export const encodingLength = packet.encodingLength
 
 export function streamEncode (result) {
   const buf = encode(result)
