@@ -1,3 +1,7 @@
+# Version 5.3.0 - 2022-06-22
+
+- Refactor: ESM module support
+
 # Version 5.2.0 - 2019-02-21
 
 - Feature: Added support for de/encoding certain OPT options.
