@@ -34,7 +34,7 @@ tape('txt-scalar-buffer', function (t) {
   const buf = packet.txt.encode(data)
   const val = packet.txt.decode(buf)
   t.equal(val.length, 1, 'array length')
-  t.ok(data.equals(val[0]), 'data')
+  t.ok(compare(t, val[0], data), 'data')
   t.end()
 })
 
