@@ -1,10 +1,11 @@
-import { Buffer } from 'buffer'
 import * as ip from '@leichtgewicht/ip-codec'
-import * as types from '@leichtgewicht/dns-packet/types.js'
-import * as rcodes from '@leichtgewicht/dns-packet/rcodes.js'
-import * as opcodes from '@leichtgewicht/dns-packet/opcodes.js'
-import * as classes from '@leichtgewicht/dns-packet/classes.js'
-import * as optioncodes from '@leichtgewicht/dns-packet/optioncodes.js'
+import * as types from './types.mjs'
+import * as rcodes from './rcodes.mjs'
+import * as opcodes from './opcodes.mjs'
+import * as classes from './classes.mjs'
+import * as optioncodes from './optioncodes.mjs'
+import * as b from './buffer_utils.mjs'
+import { decode as toUtf8 } from 'utf8-codec'
 
 const QUERY_FLAG = 0
 const RESPONSE_FLAG = 1 << 15
@@ -25,7 +26,7 @@ function codec ({ bytes = 0, encode, decode, encodingLength }) {
 
 export const name = codec({
   encode (str, buf, offset) {
-    if (!buf) buf = Buffer.alloc(name.encodingLength(str))
+    if (!buf) buf = new Uint8Array(name.encodingLength(str))
     if (!offset) offset = 0
     const oldOffset = offset
 
@@ -35,7 +36,7 @@ export const name = codec({
       const list = n.split('.')
 
       for (let i = 0; i < list.length; i++) {
-        const len = buf.write(list[i], offset + 1)
+        const len = b.write(buf, list[i], offset + 1)
         buf[offset] = len
         offset += len + 1
       }
@@ -72,14 +73,14 @@ export const name = codec({
         if (totalLength > 254) {
           throw new Error('Cannot decode name (name too long)')
         }
-        list.push(buf.toString('utf-8', offset, offset + len))
+        list.push(toUtf8(buf, offset, offset + len))
         offset += len
         consumedBytes += jumped ? 0 : len
       } else if ((len & 0xc0) === 0xc0) {
         if (offset + 1 > buf.length) {
           throw new Error('Cannot decode name (buffer overflow)')
         }
-        const jumpOffset = buf.readUInt16BE(offset - 1) - 0xc000
+        const jumpOffset = b.readUInt16BE(buf, offset - 1) - 0xc000
         if (jumpOffset >= oldOffset) {
           // Allow only pointers to prior data. RFC 1035, section 4.1.4 states:
           // "[...] an entire domain name or a list of labels at the end of a domain name
@@ -100,16 +101,16 @@ export const name = codec({
   },
   encodingLength (n) {
     if (n === '.' || n === '..') return 1
-    return Buffer.byteLength(n.replace(/^\.|\.$/gm, '')) + 2
+    return b.bytelength(n.replace(/^\.|\.$/gm, '')) + 2
   }
 })
 
 const string = codec({
   encode (s, buf, offset) {
-    if (!buf) buf = Buffer.alloc(string.encodingLength(s))
+    if (!buf) buf = new Uint8Array(string.encodingLength(s))
     if (!offset) offset = 0
 
-    const len = buf.write(s, offset + 1)
+    const len = b.write(buf, s, offset + 1)
     buf[offset] = len
     string.encode.bytes = len + 1
     return buf
@@ -118,40 +119,40 @@ const string = codec({
     if (!offset) offset = 0
 
     const len = buf[offset]
-    const s = buf.toString('utf-8', offset + 1, offset + 1 + len)
+    const s = toUtf8(buf, offset + 1, offset + 1 + len)
     string.decode.bytes = len + 1
     return s
   },
   encodingLength (s) {
-    return Buffer.byteLength(s) + 1
+    return b.bytelength(s) + 1
   }
 })
 
 const header = codec({
   bytes: 12,
   encode (h, buf, offset) {
-    if (!buf) buf = Buffer.alloc(header.encodingLength(h))
+    if (!buf) buf = new Uint8Array(header.encodingLength(h))
     if (!offset) offset = 0
 
     const flags = (h.flags || 0) & 32767
     const type = h.type === 'response' ? RESPONSE_FLAG : QUERY_FLAG
 
-    buf.writeUInt16BE(h.id || 0, offset)
-    buf.writeUInt16BE(flags | type, offset + 2)
-    buf.writeUInt16BE(h.questions.length, offset + 4)
-    buf.writeUInt16BE(h.answers.length, offset + 6)
-    buf.writeUInt16BE(h.authorities.length, offset + 8)
-    buf.writeUInt16BE(h.additionals.length, offset + 10)
+    b.writeUInt16BE(buf, h.id || 0, offset)
+    b.writeUInt16BE(buf, flags | type, offset + 2)
+    b.writeUInt16BE(buf, h.questions.length, offset + 4)
+    b.writeUInt16BE(buf, h.answers.length, offset + 6)
+    b.writeUInt16BE(buf, h.authorities.length, offset + 8)
+    b.writeUInt16BE(buf, h.additionals.length, offset + 10)
 
     return buf
   },
   decode (buf, offset) {
     if (!offset) offset = 0
     if (buf.length < 12) throw new Error('Header must be 12 bytes')
-    const flags = buf.readUInt16BE(offset + 2)
+    const flags = b.readUInt16BE(buf, offset + 2)
 
     return {
-      id: buf.readUInt16BE(offset),
+      id: b.readUInt16BE(buf, offset),
       type: flags & RESPONSE_FLAG ? 'response' : 'query',
       flags: flags & 32767,
       flag_qr: ((flags >> 15) & 0x1) === 1,
@@ -164,10 +165,10 @@ const header = codec({
       flag_ad: ((flags >> 5) & 0x1) === 1,
       flag_cd: ((flags >> 4) & 0x1) === 1,
       rcode: rcodes.toString(flags & 0xf),
-      questions: new Array(buf.readUInt16BE(offset + 4)),
-      answers: new Array(buf.readUInt16BE(offset + 6)),
-      authorities: new Array(buf.readUInt16BE(offset + 8)),
-      additionals: new Array(buf.readUInt16BE(offset + 10))
+      questions: new Array(b.readUInt16BE(buf, offset + 4)),
+      answers: new Array(b.readUInt16BE(buf, offset + 6)),
+      authorities: new Array(b.readUInt16BE(buf, offset + 8)),
+      additionals: new Array(b.readUInt16BE(buf, offset + 10))
     }
   },
   encodingLength () {
@@ -177,19 +178,20 @@ const header = codec({
 
 const runknown = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(runknown.encodingLength(data))
+    if (!buf) buf = new Uint8Array(runknown.encodingLength(data))
     if (!offset) offset = 0
 
-    buf.writeUInt16BE(data.length, offset)
-    data.copy(buf, offset + 2)
+    const dLen = data.length
+    b.writeUInt16BE(buf, dLen, offset)
+    b.copy(data, buf, offset + 2, 0, dLen)
 
-    runknown.encode.bytes = data.length + 2
+    runknown.encode.bytes = dLen + 2
     return buf
   },
   decode (buf, offset) {
     if (!offset) offset = 0
 
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
     const data = buf.slice(offset + 2, offset + 2 + len)
     runknown.decode.bytes = len + 2
     return data
@@ -201,18 +203,18 @@ const runknown = codec({
 
 const rns = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rns.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rns.encodingLength(data))
     if (!offset) offset = 0
 
     name.encode(data, buf, offset + 2)
-    buf.writeUInt16BE(name.encode.bytes, offset)
+    b.writeUInt16BE(buf, name.encode.bytes, offset)
     rns.encode.bytes = name.encode.bytes + 2
     return buf
   },
   decode (buf, offset) {
     if (!offset) offset = 0
 
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
     const dd = name.decode(buf, offset + 2)
 
     rns.decode.bytes = len + 2
@@ -225,7 +227,7 @@ const rns = codec({
 
 const rsoa = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rsoa.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rsoa.encodingLength(data))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -234,18 +236,18 @@ const rsoa = codec({
     offset += name.encode.bytes
     name.encode(data.rname, buf, offset)
     offset += name.encode.bytes
-    buf.writeUInt32BE(data.serial || 0, offset)
+    b.writeUInt32BE(buf, data.serial || 0, offset)
     offset += 4
-    buf.writeUInt32BE(data.refresh || 0, offset)
+    b.writeUInt32BE(buf, data.refresh || 0, offset)
     offset += 4
-    buf.writeUInt32BE(data.retry || 0, offset)
+    b.writeUInt32BE(buf, data.retry || 0, offset)
     offset += 4
-    buf.writeUInt32BE(data.expire || 0, offset)
+    b.writeUInt32BE(buf, data.expire || 0, offset)
     offset += 4
-    buf.writeUInt32BE(data.minimum || 0, offset)
+    b.writeUInt32BE(buf, data.minimum || 0, offset)
     offset += 4
 
-    buf.writeUInt16BE(offset - oldOffset - 2, oldOffset)
+    b.writeUInt16BE(buf, offset - oldOffset - 2, oldOffset)
     rsoa.encode.bytes = offset - oldOffset
     return buf
   },
@@ -260,15 +262,15 @@ const rsoa = codec({
     offset += name.decode.bytes
     data.rname = name.decode(buf, offset)
     offset += name.decode.bytes
-    data.serial = buf.readUInt32BE(offset)
+    data.serial = b.readUInt32BE(buf, offset)
     offset += 4
-    data.refresh = buf.readUInt32BE(offset)
+    data.refresh = b.readUInt32BE(buf, offset)
     offset += 4
-    data.retry = buf.readUInt32BE(offset)
+    data.retry = b.readUInt32BE(buf, offset)
     offset += 4
-    data.expire = buf.readUInt32BE(offset)
+    data.expire = b.readUInt32BE(buf, offset)
     offset += 4
-    data.minimum = buf.readUInt32BE(offset)
+    data.minimum = b.readUInt32BE(buf, offset)
     offset += 4
 
     rsoa.decode.bytes = offset - oldOffset
@@ -284,14 +286,14 @@ const rtxt = codec({
     if (!Array.isArray(data)) data = [data]
     for (let i = 0; i < data.length; i++) {
       if (typeof data[i] === 'string') {
-        data[i] = Buffer.from(data[i])
+        data[i] = b.from(data[i])
       }
-      if (!Buffer.isBuffer(data[i])) {
+      if (!b.isU8Arr(data[i])) {
         throw new Error('Must be a Buffer')
       }
     }
 
-    if (!buf) buf = Buffer.alloc(rtxt.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rtxt.encodingLength(data))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -299,18 +301,18 @@ const rtxt = codec({
 
     data.forEach(function (d) {
       buf[offset++] = d.length
-      d.copy(buf, offset, 0, d.length)
+      b.copy(d, buf, offset, 0, d.length)
       offset += d.length
     })
 
-    buf.writeUInt16BE(offset - oldOffset - 2, oldOffset)
+    b.writeUInt16BE(buf, offset - oldOffset - 2, oldOffset)
     rtxt.encode.bytes = offset - oldOffset
     return buf
   },
   decode (buf, offset) {
     if (!offset) offset = 0
     const oldOffset = offset
-    let remaining = buf.readUInt16BE(offset)
+    let remaining = b.readUInt16BE(buf, offset)
     offset += 2
 
     const data = []
@@ -333,7 +335,7 @@ const rtxt = codec({
     let length = 2
     data.forEach(function (buf) {
       if (typeof buf === 'string') {
-        length += Buffer.byteLength(buf) + 1
+        length += b.bytelength(buf) + 1
       } else {
         length += buf.length + 1
       }
@@ -344,27 +346,27 @@ const rtxt = codec({
 
 const rnull = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rnull.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rnull.encodingLength(data))
     if (!offset) offset = 0
 
-    if (typeof data === 'string') data = Buffer.from(data)
-    if (!data) data = Buffer.alloc(0)
+    if (typeof data === 'string') data = b.from(data)
+    if (!data) data = new Uint8Array(0)
 
     const oldOffset = offset
     offset += 2
 
     const len = data.length
-    data.copy(buf, offset, 0, len)
+    b.copy(data, buf, offset, 0, len)
     offset += len
 
-    buf.writeUInt16BE(offset - oldOffset - 2, oldOffset)
+    b.writeUInt16BE(buf, offset - oldOffset - 2, oldOffset)
     rnull.encode.bytes = offset - oldOffset
     return buf
   },
   decode (buf, offset) {
     if (!offset) offset = 0
     const oldOffset = offset
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
 
     offset += 2
 
@@ -376,13 +378,13 @@ const rnull = codec({
   },
   encodingLength (data) {
     if (!data) return 2
-    return (Buffer.isBuffer(data) ? data.length : Buffer.byteLength(data)) + 2
+    return (b.isU8Arr(data) ? data.length : b.bytelength(data)) + 2
   }
 })
 
 const rhinfo = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rhinfo.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rhinfo.encodingLength(data))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -391,7 +393,7 @@ const rhinfo = codec({
     offset += string.encode.bytes
     string.encode(data.os, buf, offset)
     offset += string.encode.bytes
-    buf.writeUInt16BE(offset - oldOffset - 2, oldOffset)
+    b.writeUInt16BE(buf, offset - oldOffset - 2, oldOffset)
     rhinfo.encode.bytes = offset - oldOffset
     return buf
   },
@@ -416,11 +418,11 @@ const rhinfo = codec({
 
 const rptr = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rptr.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rptr.encodingLength(data))
     if (!offset) offset = 0
 
     name.encode(data, buf, offset + 2)
-    buf.writeUInt16BE(name.encode.bytes, offset)
+    b.writeUInt16BE(buf, name.encode.bytes, offset)
     rptr.encode.bytes = name.encode.bytes + 2
     return buf
   },
@@ -438,16 +440,16 @@ const rptr = codec({
 
 const rsrv = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rsrv.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rsrv.encodingLength(data))
     if (!offset) offset = 0
 
-    buf.writeUInt16BE(data.priority || 0, offset + 2)
-    buf.writeUInt16BE(data.weight || 0, offset + 4)
-    buf.writeUInt16BE(data.port || 0, offset + 6)
+    b.writeUInt16BE(buf, data.priority || 0, offset + 2)
+    b.writeUInt16BE(buf, data.weight || 0, offset + 4)
+    b.writeUInt16BE(buf, data.port || 0, offset + 6)
     name.encode(data.target, buf, offset + 8)
 
     const len = name.encode.bytes + 6
-    buf.writeUInt16BE(len, offset)
+    b.writeUInt16BE(buf, len, offset)
 
     rsrv.encode.bytes = len + 2
     return buf
@@ -455,12 +457,12 @@ const rsrv = codec({
   decode (buf, offset) {
     if (!offset) offset = 0
 
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
 
     const data = {}
-    data.priority = buf.readUInt16BE(offset + 2)
-    data.weight = buf.readUInt16BE(offset + 4)
-    data.port = buf.readUInt16BE(offset + 6)
+    data.priority = b.readUInt16BE(buf, offset + 2)
+    data.weight = b.readUInt16BE(buf, offset + 4)
+    data.port = b.readUInt16BE(buf, offset + 6)
     data.target = name.decode(buf, offset + 8)
 
     rsrv.decode.bytes = len + 2
@@ -475,21 +477,21 @@ const rcaa = codec({
   encode (data, buf, offset) {
     const len = rcaa.encodingLength(data)
 
-    if (!buf) buf = Buffer.alloc(rcaa.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rcaa.encodingLength(data))
     if (!offset) offset = 0
 
     if (data.issuerCritical) {
       data.flags = rcaa.ISSUER_CRITICAL
     }
 
-    buf.writeUInt16BE(len - 2, offset)
+    b.writeUInt16BE(buf, len - 2, offset)
     offset += 2
-    buf.writeUInt8(data.flags || 0, offset)
+    buf[offset] = data.flags || 0
     offset += 1
     string.encode(data.tag, buf, offset)
     offset += string.encode.bytes
-    buf.write(data.value, offset)
-    offset += Buffer.byteLength(data.value)
+    b.write(buf, data.value, offset)
+    offset += b.bytelength(data.value)
 
     rcaa.encode.bytes = len
     return buf
@@ -497,16 +499,16 @@ const rcaa = codec({
   decode (buf, offset) {
     if (!offset) offset = 0
 
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
     offset += 2
 
     const oldOffset = offset
     const data = {}
-    data.flags = buf.readUInt8(offset)
+    data.flags = buf[offset]
     offset += 1
     data.tag = string.decode(buf, offset)
     offset += string.decode.bytes
-    data.value = buf.toString('utf-8', offset, oldOffset + len)
+    data.value = toUtf8(buf, offset, oldOffset + len)
 
     data.issuerCritical = !!(data.flags & rcaa.ISSUER_CRITICAL)
 
@@ -523,17 +525,17 @@ rcaa.ISSUER_CRITICAL = 1 << 7
 
 const rmx = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rmx.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rmx.encodingLength(data))
     if (!offset) offset = 0
 
     const oldOffset = offset
     offset += 2
-    buf.writeUInt16BE(data.preference || 0, offset)
+    b.writeUInt16BE(buf, data.preference || 0, offset)
     offset += 2
     name.encode(data.exchange, buf, offset)
     offset += name.encode.bytes
 
-    buf.writeUInt16BE(offset - oldOffset - 2, oldOffset)
+    b.writeUInt16BE(buf, offset - oldOffset - 2, oldOffset)
     rmx.encode.bytes = offset - oldOffset
     return buf
   },
@@ -544,7 +546,7 @@ const rmx = codec({
 
     const data = {}
     offset += 2
-    data.preference = buf.readUInt16BE(offset)
+    data.preference = b.readUInt16BE(buf, offset)
     offset += 2
     data.exchange = name.decode(buf, offset)
     offset += name.decode.bytes
@@ -559,10 +561,10 @@ const rmx = codec({
 
 const ra = codec({
   encode (host, buf, offset) {
-    if (!buf) buf = Buffer.alloc(ra.encodingLength(host))
+    if (!buf) buf = new Uint8Array(ra.encodingLength(host))
     if (!offset) offset = 0
 
-    buf.writeUInt16BE(4, offset)
+    b.writeUInt16BE(buf, 4, offset)
     offset += 2
     ip.v4.encode(host, buf, offset)
     return buf
@@ -579,10 +581,10 @@ const ra = codec({
 
 const raaaa = codec({
   encode (host, buf, offset) {
-    if (!buf) buf = Buffer.alloc(raaaa.encodingLength(host))
+    if (!buf) buf = new Uint8Array(raaaa.encodingLength(host))
     if (!offset) offset = 0
 
-    buf.writeUInt16BE(16, offset)
+    b.writeUInt16BE(buf, 16, offset)
     offset += 2
     ip.v6.encode(host, buf, offset)
     raaaa.encode.bytes = 18
@@ -599,19 +601,21 @@ const raaaa = codec({
   bytes: 18
 })
 
+const alloc = size => new Uint8Array(size)
+
 const roption = codec({
   encode (option, buf, offset) {
-    if (!buf) buf = Buffer.alloc(roption.encodingLength(option))
+    if (!buf) buf = new Uint8Array(roption.encodingLength(option))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const code = optioncodes.toCode(option.code)
-    buf.writeUInt16BE(code, offset)
+    b.writeUInt16BE(buf, code, offset)
     offset += 2
     if (option.data) {
-      buf.writeUInt16BE(option.data.length, offset)
+      b.writeUInt16BE(buf, option.data.length, offset)
       offset += 2
-      option.data.copy(buf, offset)
+      b.copy(option.data, buf, offset)
       offset += option.data.length
     } else {
       switch (code) {
@@ -621,17 +625,17 @@ const roption = codec({
           {
             // note: do IP math before calling
             const spl = option.sourcePrefixLength || 0
-            const fam = option.family || ip.familyOf(option.ip)
-            const ipBuf = ip.encode(option.ip, Buffer.alloc)
+            const fam = option.family || ip.familyOf(option.ip, alloc)
+            const ipBuf = ip.encode(option.ip, alloc)
             const ipLen = Math.ceil(spl / 8)
-            buf.writeUInt16BE(ipLen + 4, offset)
+            b.writeUInt16BE(buf, ipLen + 4, offset)
             offset += 2
-            buf.writeUInt16BE(fam, offset)
+            b.writeUInt16BE(buf, fam, offset)
             offset += 2
-            buf.writeUInt8(spl, offset++)
-            buf.writeUInt8(option.scopePrefixLength || 0, offset++)
+            buf[offset++] = spl
+            buf[offset++] = option.scopePrefixLength || 0
 
-            ipBuf.copy(buf, offset, 0, ipLen)
+            b.copy(ipBuf, buf, offset, 0, ipLen)
             offset += ipLen
           }
           break
@@ -639,19 +643,19 @@ const roption = codec({
         // case 10: COOKIE.  No encode makes sense.
         case 11: // KEEP-ALIVE
           if (option.timeout) {
-            buf.writeUInt16BE(2, offset)
+            b.writeUInt16BE(buf, 2, offset)
             offset += 2
-            buf.writeUInt16BE(option.timeout, offset)
+            b.writeUInt16BE(buf, option.timeout, offset)
             offset += 2
           } else {
-            buf.writeUInt16BE(0, offset)
+            b.writeUInt16BE(buf, 0, offset)
             offset += 2
           }
           break
         case 12: // PADDING
           {
             const len = option.length || 0
-            buf.writeUInt16BE(len, offset)
+            b.writeUInt16BE(buf, len, offset)
             offset += 2
             buf.fill(0, offset, offset + len)
             offset += len
@@ -661,10 +665,10 @@ const roption = codec({
         case 14: // KEY-TAG
           {
             const tagsLen = option.tags.length * 2
-            buf.writeUInt16BE(tagsLen, offset)
+            b.writeUInt16BE(buf, tagsLen, offset)
             offset += 2
             for (const tag of option.tags) {
-              buf.writeUInt16BE(tag, offset)
+              b.writeUInt16BE(buf, tag, offset)
               offset += 2
             }
           }
@@ -680,36 +684,36 @@ const roption = codec({
   decode (buf, offset) {
     if (!offset) offset = 0
     const option = {}
-    option.code = buf.readUInt16BE(offset)
+    option.code = b.readUInt16BE(buf, offset)
     option.type = optioncodes.toString(option.code)
     offset += 2
-    const len = buf.readUInt16BE(offset)
+    const len = b.readUInt16BE(buf, offset)
     offset += 2
     option.data = buf.slice(offset, offset + len)
     switch (option.code) {
       // case 3: NSID.  No decode makes sense.
       case 8: // ECS
-        option.family = buf.readUInt16BE(offset)
+        option.family = b.readUInt16BE(buf, offset)
         offset += 2
-        option.sourcePrefixLength = buf.readUInt8(offset++)
-        option.scopePrefixLength = buf.readUInt8(offset++)
+        option.sourcePrefixLength = buf[offset++]
+        option.scopePrefixLength = buf[offset++]
         {
-          const padded = Buffer.alloc((option.family === 1) ? 4 : 16)
-          buf.copy(padded, 0, offset, offset + len - 4)
+          const padded = new Uint8Array((option.family === 1) ? 4 : 16)
+          b.copy(buf, padded, 0, offset, offset + len - 4)
           option.ip = ip.decode(padded)
         }
         break
       // case 12: Padding.  No decode makes sense.
       case 11: // KEEP-ALIVE
         if (len > 0) {
-          option.timeout = buf.readUInt16BE(offset)
+          option.timeout = b.readUInt16BE(buf, offset)
           offset += 2
         }
         break
       case 14:
         option.tags = []
         for (let i = 0; i < len; i += 2) {
-          option.tags.push(buf.readUInt16BE(offset))
+          option.tags.push(b.readUInt16BE(buf, offset))
           offset += 2
         }
       // don't worry about default.  caller will use data if desired
@@ -742,12 +746,12 @@ const roption = codec({
 
 const ropt = codec({
   encode (options, buf, offset) {
-    if (!buf) buf = Buffer.alloc(ropt.encodingLength(options))
+    if (!buf) buf = new Uint8Array(ropt.encodingLength(options))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const rdlen = encodingLengthList(options, roption)
-    buf.writeUInt16BE(rdlen, offset)
+    b.writeUInt16BE(buf, rdlen, offset)
     offset = encodeList(options, roption, buf, offset + 2)
 
     ropt.encode.bytes = offset - oldOffset
@@ -758,7 +762,7 @@ const ropt = codec({
     const oldOffset = offset
 
     const options = []
-    let rdlen = buf.readUInt16BE(offset)
+    let rdlen = b.readUInt16BE(buf, offset)
     offset += 2
     let o = 0
     while (rdlen > 0) {
@@ -776,27 +780,27 @@ const ropt = codec({
 
 const rdnskey = codec({
   encode (key, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rdnskey.encodingLength(key))
+    if (!buf) buf = new Uint8Array(rdnskey.encodingLength(key))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const keydata = key.key
-    if (!Buffer.isBuffer(keydata)) {
+    if (!b.isU8Arr(keydata)) {
       throw new Error('Key must be a Buffer')
     }
 
     offset += 2 // Leave space for length
-    buf.writeUInt16BE(key.flags, offset)
+    b.writeUInt16BE(buf, key.flags, offset)
     offset += 2
-    buf.writeUInt8(rdnskey.PROTOCOL_DNSSEC, offset)
+    buf[offset] = rdnskey.PROTOCOL_DNSSEC
     offset += 1
-    buf.writeUInt8(key.algorithm, offset)
+    buf[offset] = key.algorithm
     offset += 1
-    keydata.copy(buf, offset, 0, keydata.length)
+    b.copy(keydata, buf, offset, 0, keydata.length)
     offset += keydata.length
 
     rdnskey.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rdnskey.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rdnskey.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -804,15 +808,15 @@ const rdnskey = codec({
     const oldOffset = offset
 
     const key = {}
-    const length = buf.readUInt16BE(offset)
+    const length = b.readUInt16BE(buf, offset)
     offset += 2
-    key.flags = buf.readUInt16BE(offset)
+    key.flags = b.readUInt16BE(buf, offset)
     offset += 2
-    if (buf.readUInt8(offset) !== rdnskey.PROTOCOL_DNSSEC) {
+    if (buf[offset] !== rdnskey.PROTOCOL_DNSSEC) {
       throw new Error('Protocol must be 3')
     }
     offset += 1
-    key.algorithm = buf.readUInt8(offset)
+    key.algorithm = buf[offset]
     offset += 1
     key.key = buf.slice(offset, oldOffset + length + 2)
     offset += key.key.length
@@ -820,7 +824,7 @@ const rdnskey = codec({
     return key
   },
   encodingLength (key) {
-    return 6 + Buffer.byteLength(key.key)
+    return 6 + b.bytelength(key.key)
   }
 })
 
@@ -830,37 +834,37 @@ rdnskey.SECURE_ENTRYPOINT = 0x8000
 
 const rrrsig = codec({
   encode (sig, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rrrsig.encodingLength(sig))
+    if (!buf) buf = new Uint8Array(rrrsig.encodingLength(sig))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const signature = sig.signature
-    if (!Buffer.isBuffer(signature)) {
+    if (!b.isU8Arr(signature)) {
       throw new Error('Signature must be a Buffer')
     }
 
     offset += 2 // Leave space for length
-    buf.writeUInt16BE(types.toType(sig.typeCovered), offset)
+    b.writeUInt16BE(buf, types.toType(sig.typeCovered), offset)
     offset += 2
-    buf.writeUInt8(sig.algorithm, offset)
+    buf[offset] = sig.algorithm
     offset += 1
-    buf.writeUInt8(sig.labels, offset)
+    buf[offset] = sig.labels
     offset += 1
-    buf.writeUInt32BE(sig.originalTTL, offset)
+    b.writeUInt32BE(buf, sig.originalTTL, offset)
     offset += 4
-    buf.writeUInt32BE(sig.expiration, offset)
+    b.writeUInt32BE(buf, sig.expiration, offset)
     offset += 4
-    buf.writeUInt32BE(sig.inception, offset)
+    b.writeUInt32BE(buf, sig.inception, offset)
     offset += 4
-    buf.writeUInt16BE(sig.keyTag, offset)
+    b.writeUInt16BE(buf, sig.keyTag, offset)
     offset += 2
     name.encode(sig.signersName, buf, offset)
     offset += name.encode.bytes
-    signature.copy(buf, offset, 0, signature.length)
+    b.copy(signature, buf, offset, 0, signature.length)
     offset += signature.length
 
     rrrsig.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rrrsig.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rrrsig.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -868,21 +872,21 @@ const rrrsig = codec({
     const oldOffset = offset
 
     const sig = {}
-    const length = buf.readUInt16BE(offset)
+    const length = b.readUInt16BE(buf, offset)
     offset += 2
-    sig.typeCovered = types.toString(buf.readUInt16BE(offset))
+    sig.typeCovered = types.toString(b.readUInt16BE(buf, offset))
     offset += 2
-    sig.algorithm = buf.readUInt8(offset)
+    sig.algorithm = buf[offset]
     offset += 1
-    sig.labels = buf.readUInt8(offset)
+    sig.labels = buf[offset]
     offset += 1
-    sig.originalTTL = buf.readUInt32BE(offset)
+    sig.originalTTL = b.readUInt32BE(buf, offset)
     offset += 4
-    sig.expiration = buf.readUInt32BE(offset)
+    sig.expiration = b.readUInt32BE(buf, offset)
     offset += 4
-    sig.inception = buf.readUInt32BE(offset)
+    sig.inception = b.readUInt32BE(buf, offset)
     offset += 4
-    sig.keyTag = buf.readUInt16BE(offset)
+    sig.keyTag = b.readUInt16BE(buf, offset)
     offset += 2
     sig.signersName = name.decode(buf, offset)
     offset += name.decode.bytes
@@ -894,12 +898,12 @@ const rrrsig = codec({
   encodingLength (sig) {
     return 20 +
       name.encodingLength(sig.signersName) +
-      Buffer.byteLength(sig.signature)
+      b.bytelength(sig.signature)
   }
 })
 const rrp = codec({
   encode (data, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rrp.encodingLength(data))
+    if (!buf) buf = new Uint8Array(rrp.encodingLength(data))
     if (!offset) offset = 0
     const oldOffset = offset
 
@@ -909,7 +913,7 @@ const rrp = codec({
     name.encode(data.txt || '.', buf, offset)
     offset += name.encode.bytes
     rrp.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rrp.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rrp.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -932,7 +936,7 @@ const rrp = codec({
 
 const typebitmap = codec({
   encode (typelist, buf, offset) {
-    if (!buf) buf = Buffer.alloc(typebitmap.encodingLength(typelist))
+    if (!buf) buf = new Uint8Array(typebitmap.encodingLength(typelist))
     if (!offset) offset = 0
     const oldOffset = offset
 
@@ -947,12 +951,12 @@ const typebitmap = codec({
 
     for (let i = 0; i < typesByWindow.length; i++) {
       if (typesByWindow[i] !== undefined) {
-        const windowBuf = Buffer.from(typesByWindow[i])
-        buf.writeUInt8(i, offset)
+        const windowBuf = b.from(typesByWindow[i])
+        buf[offset] = i
         offset += 1
-        buf.writeUInt8(windowBuf.length, offset)
+        buf[offset] = windowBuf.length
         offset += 1
-        windowBuf.copy(buf, offset)
+        b.copy(windowBuf, buf, offset, 0, windowBuf.length)
         offset += windowBuf.length
       }
     }
@@ -966,12 +970,12 @@ const typebitmap = codec({
 
     const typelist = []
     while (offset - oldOffset < length) {
-      const window = buf.readUInt8(offset)
+      const window = buf[offset]
       offset += 1
-      const windowLength = buf.readUInt8(offset)
+      const windowLength = buf[offset]
       offset += 1
       for (let i = 0; i < windowLength; i++) {
-        const b = buf.readUInt8(offset + i)
+        const b = buf[offset + i]
         for (let j = 0; j < 8; j++) {
           if (b & (1 << (7 - j))) {
             const typeid = types.toString((window << 8) | (i << 3) | j)
@@ -1005,7 +1009,7 @@ const typebitmap = codec({
 
 const rnsec = codec({
   encode (record, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rnsec.encodingLength(record))
+    if (!buf) buf = new Uint8Array(rnsec.encodingLength(record))
     if (!offset) offset = 0
     const oldOffset = offset
 
@@ -1016,7 +1020,7 @@ const rnsec = codec({
     offset += typebitmap.encode.bytes
 
     rnsec.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rnsec.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rnsec.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -1024,7 +1028,7 @@ const rnsec = codec({
     const oldOffset = offset
 
     const record = {}
-    const length = buf.readUInt16BE(offset)
+    const length = b.readUInt16BE(buf, offset)
     offset += 2
     record.nextDomain = name.decode(buf, offset)
     offset += name.decode.bytes
@@ -1043,40 +1047,40 @@ const rnsec = codec({
 
 const rnsec3 = codec({
   encode (record, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rnsec3.encodingLength(record))
+    if (!buf) buf = new Uint8Array(rnsec3.encodingLength(record))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const salt = record.salt
-    if (!Buffer.isBuffer(salt)) {
+    if (!b.isU8Arr(salt)) {
       throw new Error('salt must be a Buffer')
     }
 
     const nextDomain = record.nextDomain
-    if (!Buffer.isBuffer(nextDomain)) {
+    if (!b.isU8Arr(nextDomain)) {
       throw new Error('nextDomain must be a Buffer')
     }
 
     offset += 2 // Leave space for length
-    buf.writeUInt8(record.algorithm, offset)
+    buf[offset] = record.algorithm
     offset += 1
-    buf.writeUInt8(record.flags, offset)
+    buf[offset] = record.flags
     offset += 1
-    buf.writeUInt16BE(record.iterations, offset)
+    b.writeUInt16BE(buf, record.iterations, offset)
     offset += 2
-    buf.writeUInt8(salt.length, offset)
+    buf[offset] = salt.length
     offset += 1
-    salt.copy(buf, offset, 0, salt.length)
+    b.copy(salt, buf, offset, 0, salt.length)
     offset += salt.length
-    buf.writeUInt8(nextDomain.length, offset)
+    buf[offset] = nextDomain.length
     offset += 1
-    nextDomain.copy(buf, offset, 0, nextDomain.length)
+    b.copy(nextDomain, buf, offset, 0, nextDomain.length)
     offset += nextDomain.length
     typebitmap.encode(record.rrtypes, buf, offset)
     offset += typebitmap.encode.bytes
 
     rnsec3.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rnsec3.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rnsec3.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -1084,19 +1088,19 @@ const rnsec3 = codec({
     const oldOffset = offset
 
     const record = {}
-    const length = buf.readUInt16BE(offset)
+    const length = b.readUInt16BE(buf, offset)
     offset += 2
-    record.algorithm = buf.readUInt8(offset)
+    record.algorithm = buf[offset]
     offset += 1
-    record.flags = buf.readUInt8(offset)
+    record.flags = buf[offset]
     offset += 1
-    record.iterations = buf.readUInt16BE(offset)
+    record.iterations = b.readUInt16BE(buf, offset)
     offset += 2
-    const saltLength = buf.readUInt8(offset)
+    const saltLength = buf[offset]
     offset += 1
     record.salt = buf.slice(offset, offset + saltLength)
     offset += saltLength
-    const hashLength = buf.readUInt8(offset)
+    const hashLength = buf[offset]
     offset += 1
     record.nextDomain = buf.slice(offset, offset + hashLength)
     offset += hashLength
@@ -1116,27 +1120,27 @@ const rnsec3 = codec({
 
 const rds = codec({
   encode (digest, buf, offset) {
-    if (!buf) buf = Buffer.alloc(rds.encodingLength(digest))
+    if (!buf) buf = new Uint8Array(rds.encodingLength(digest))
     if (!offset) offset = 0
     const oldOffset = offset
 
     const digestdata = digest.digest
-    if (!Buffer.isBuffer(digestdata)) {
+    if (!b.isU8Arr(digestdata)) {
       throw new Error('Digest must be a Buffer')
     }
 
     offset += 2 // Leave space for length
-    buf.writeUInt16BE(digest.keyTag, offset)
+    b.writeUInt16BE(buf, digest.keyTag, offset)
     offset += 2
-    buf.writeUInt8(digest.algorithm, offset)
+    buf[offset] = digest.algorithm
     offset += 1
-    buf.writeUInt8(digest.digestType, offset)
+    buf[offset] = digest.digestType
     offset += 1
-    digestdata.copy(buf, offset, 0, digestdata.length)
+    b.copy(digestdata, buf, offset, 0, digestdata.length)
     offset += digestdata.length
 
     rds.encode.bytes = offset - oldOffset
-    buf.writeUInt16BE(rds.encode.bytes - 2, oldOffset)
+    b.writeUInt16BE(buf, rds.encode.bytes - 2, oldOffset)
     return buf
   },
   decode (buf, offset) {
@@ -1144,13 +1148,13 @@ const rds = codec({
     const oldOffset = offset
 
     const digest = {}
-    const length = buf.readUInt16BE(offset)
+    const length = b.readUInt16BE(buf, offset)
     offset += 2
-    digest.keyTag = buf.readUInt16BE(offset)
+    digest.keyTag = b.readUInt16BE(buf, offset)
     offset += 2
-    digest.algorithm = buf.readUInt8(offset)
+    digest.algorithm = buf[offset]
     offset += 1
-    digest.digestType = buf.readUInt8(offset)
+    digest.digestType = buf[offset]
     offset += 1
     digest.digest = buf.slice(offset, oldOffset + length + 2)
     offset += digest.digest.length
@@ -1158,7 +1162,7 @@ const rds = codec({
     return digest
   },
   encodingLength (digest) {
-    return 6 + Buffer.byteLength(digest.digest)
+    return 6 + b.bytelength(digest.digest)
   }
 })
 
@@ -1190,7 +1194,7 @@ function renc (type) {
 
 export const answer = codec({
   encode (a, buf, offset) {
-    if (!buf) buf = Buffer.alloc(answer.encodingLength(a))
+    if (!buf) buf = new Uint8Array(answer.encodingLength(a))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -1198,16 +1202,16 @@ export const answer = codec({
     name.encode(a.name, buf, offset)
     offset += name.encode.bytes
 
-    buf.writeUInt16BE(types.toType(a.type), offset)
+    b.writeUInt16BE(buf, types.toType(a.type), offset)
 
     if (a.type.toUpperCase() === 'OPT') {
       if (a.name !== '.') {
         throw new Error('OPT name must be root.')
       }
-      buf.writeUInt16BE(a.udpPayloadSize || 4096, offset + 2)
-      buf.writeUInt8(a.extendedRcode || 0, offset + 4)
-      buf.writeUInt8(a.ednsVersion || 0, offset + 5)
-      buf.writeUInt16BE(a.flags || 0, offset + 6)
+      b.writeUInt16BE(buf, a.udpPayloadSize || 4096, offset + 2)
+      buf[offset + 4] = a.extendedRcode || 0
+      buf[offset + 5] = a.ednsVersion || 0
+      b.writeUInt16BE(buf, a.flags || 0, offset + 6)
 
       offset += 8
       ropt.encode(a.options || [], buf, offset)
@@ -1215,8 +1219,8 @@ export const answer = codec({
     } else {
       let klass = classes.toClass(a.class === undefined ? 'IN' : a.class)
       if (a.flush) klass |= FLUSH_MASK // the 1st bit of the class is the flush bit
-      buf.writeUInt16BE(klass, offset + 2)
-      buf.writeUInt32BE(a.ttl || 0, offset + 4)
+      b.writeUInt16BE(buf, klass, offset + 2)
+      b.writeUInt32BE(buf, a.ttl || 0, offset + 4)
 
       offset += 8
       const enc = renc(a.type)
@@ -1235,18 +1239,18 @@ export const answer = codec({
 
     a.name = name.decode(buf, offset)
     offset += name.decode.bytes
-    a.type = types.toString(buf.readUInt16BE(offset))
+    a.type = types.toString(b.readUInt16BE(buf, offset))
     if (a.type === 'OPT') {
-      a.udpPayloadSize = buf.readUInt16BE(offset + 2)
-      a.extendedRcode = buf.readUInt8(offset + 4)
-      a.ednsVersion = buf.readUInt8(offset + 5)
-      a.flags = buf.readUInt16BE(offset + 6)
+      a.udpPayloadSize = b.readUInt16BE(buf, offset + 2)
+      a.extendedRcode = buf[offset + 4]
+      a.ednsVersion = buf[offset + 5]
+      a.flags = b.readUInt16BE(buf, offset + 6)
       a.flag_do = ((a.flags >> 15) & 0x1) === 1
       a.options = ropt.decode(buf, offset + 8)
       offset += 8 + ropt.decode.bytes
     } else {
-      const klass = buf.readUInt16BE(offset + 2)
-      a.ttl = buf.readUInt32BE(offset + 4)
+      const klass = b.readUInt16BE(buf, offset + 2)
+      a.ttl = b.readUInt32BE(buf, offset + 4)
 
       a.class = classes.toString(klass & NOT_FLUSH_MASK)
       a.flush = !!(klass & FLUSH_MASK)
@@ -1267,7 +1271,7 @@ export const answer = codec({
 
 export const question = codec({
   encode (q, buf, offset) {
-    if (!buf) buf = Buffer.alloc(question.encodingLength(q))
+    if (!buf) buf = new Uint8Array(question.encodingLength(q))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -1275,10 +1279,10 @@ export const question = codec({
     name.encode(q.name, buf, offset)
     offset += name.encode.bytes
 
-    buf.writeUInt16BE(types.toType(q.type), offset)
+    b.writeUInt16BE(buf, types.toType(q.type), offset)
     offset += 2
 
-    buf.writeUInt16BE(classes.toClass(q.class === undefined ? 'IN' : q.class), offset)
+    b.writeUInt16BE(buf, classes.toClass(q.class === undefined ? 'IN' : q.class), offset)
     offset += 2
 
     question.encode.bytes = offset - oldOffset
@@ -1293,10 +1297,10 @@ export const question = codec({
     q.name = name.decode(buf, offset)
     offset += name.decode.bytes
 
-    q.type = types.toString(buf.readUInt16BE(offset))
+    q.type = types.toString(b.readUInt16BE(buf, offset))
     offset += 2
 
-    q.class = classes.toString(buf.readUInt16BE(offset))
+    q.class = classes.toString(b.readUInt16BE(buf, offset))
     offset += 2
 
     const qu = !!(q.class & QU_MASK)
@@ -1348,7 +1352,7 @@ export const packet = {
   encode: function (result, buf, offset) {
     const allocing = !buf
 
-    if (allocing) buf = Buffer.alloc(encodingLength(result))
+    if (allocing) buf = new Uint8Array(encodingLength(result))
     if (!offset) offset = 0
 
     const oldOffset = offset
@@ -1466,16 +1470,16 @@ export const encodingLength = packet.encodingLength
 
 export function streamEncode (result) {
   const buf = encode(result)
-  const sbuf = Buffer.alloc(2)
-  sbuf.writeUInt16BE(buf.byteLength)
-  const combine = Buffer.concat([sbuf, buf])
+  const combine = new Uint8Array(2 + buf.byteLength)
+  b.writeUInt16BE(combine, buf.byteLength)
+  b.copy(buf, combine, 2, 0, buf.length)
   streamEncode.bytes = combine.byteLength
   return combine
 }
 streamEncode.bytes = 0
 
 export function streamDecode (sbuf) {
-  const len = sbuf.readUInt16BE(0)
+  const len = b.readUInt16BE(sbuf, 0)
   if (sbuf.byteLength < len + 2) {
     // not enough data
     return null

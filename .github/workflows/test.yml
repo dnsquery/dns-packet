@@ -24,7 +24,7 @@ jobs:
     - uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node }}
-    - run: node test.cjs
+    - run: node test.js
 
   test_mjs:
     runs-on: ${{ matrix.os }}

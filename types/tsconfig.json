@@ -12,7 +12,7 @@
     "noEmit": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@leichtgewicht/dns-packet": ["./index.d.ts"],
+      "@leichtgewicht/dns-packet": ["./types/index.d.ts"],
       "@leichtgewicht/dns-packet/optioncodes.js": ["./optioncodes.d.ts"],
       "@leichtgewicht/dns-packet/types.js": ["./types.d.ts"],
       "@leichtgewicht/dns-packet/rcodes.js": ["./rcodes.d.ts"]

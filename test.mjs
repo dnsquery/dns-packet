@@ -1,8 +1,10 @@
-import tape from 'tape'
-import * as packet from '@leichtgewicht/dns-packet'
-import * as rcodes from '@leichtgewicht/dns-packet/rcodes.js'
-import * as opcodes from '@leichtgewicht/dns-packet/opcodes.js'
-import * as optioncodes from '@leichtgewicht/dns-packet/optioncodes.js'
+import tape, { test } from 'tape'
+import * as packet from './index.mjs'
+import * as rcodes from './rcodes.mjs'
+import * as opcodes from './opcodes.mjs'
+import * as optioncodes from './optioncodes.mjs'
+import { decode as toUtf8 } from 'utf8-codec'
+import { write, toHex, bytelength } from './buffer_utils.mjs'
 
 tape('unknown', function (t) {
   testEncoder(t, packet.unknown, Buffer.from('hello world'))
@@ -22,8 +24,8 @@ tape('txt', function (t) {
 tape('txt-scalar-string', function (t) {
   const buf = packet.txt.encode('hi')
   const val = packet.txt.decode(buf)
-  t.ok(val.length === 1, 'array length')
-  t.ok(val[0].toString() === 'hi', 'data')
+  t.equal(val.length, 1, 'array length')
+  t.ok(compare(t, val[0], Buffer.from('hi')), 'streamDecoded type match')
   t.end()
 })
 
@@ -31,8 +33,8 @@ tape('txt-scalar-buffer', function (t) {
   const data = Buffer.from([0, 1, 2, 3, 4, 5])
   const buf = packet.txt.encode(data)
   const val = packet.txt.decode(buf)
-  t.ok(val.length === 1, 'array length')
-  t.ok(val[0].equals(data), 'data')
+  t.equal(val.length, 1, 'array length')
+  t.ok(data.equals(val[0]), 'data')
   t.end()
 })
 
@@ -509,9 +511,9 @@ tape('nsec', function (t) {
   })
 
   // Test with the sample NSEC from https://tools.ietf.org/html/rfc4034#section-4.3
-  const sampleNSEC = Buffer.from('003704686f7374076578616d706c6503636f6d00' +
+  const sampleNSEC = new Uint8Array(Buffer.from('003704686f7374076578616d706c6503636f6d00' +
       '0006400100000003041b000000000000000000000000000000000000000000000' +
-      '000000020', 'hex')
+      '000000020', 'hex'))
   const decoded = packet.nsec.decode(sampleNSEC)
   t.ok(compare(t, decoded, {
     nextDomain: 'host.example.com',
@@ -683,6 +685,76 @@ tape('single query -> response encoding', function (t) {
   t.end()
 })
 
+test('buffer utf8', function (sub) {
+  [
+    '', // empty
+    'basic: hi',
+    'japanese: 日本語',
+    'mixed: 日本語 hi',
+    'min 1 byte: \x00',
+    'odd 1 byte: \x4c',
+    'max 1 byte: \x7f',
+    'min 2 byte: \x80',
+    'odd 2 byte: \xd941',
+    'max 2 byte: \x7fff',
+    'min 3 byte: \x8000',
+    'odd 3 byte: \xa158',
+    'max 3 byte: \xffff',
+    `4 byte: ${String.fromCodePoint(100000)}`
+  ].forEach((fixture, index) => {
+    sub.test(`fixture #${index}`, t => {
+      const check = Buffer.from(fixture)
+      const len = check.length
+      t.equals(bytelength(fixture), len, `fixture ${fixture} length`)
+      const buf = new Uint8Array(len)
+      t.equals(write(buf, fixture, 0), len, 'write.num')
+      t.equals(toHex(buf, 0, len), check.toString('hex'), `write: ${fixture}`)
+      t.equals(toUtf8(check, 0, check.length), check.toString(), `toUtf8: ${fixture}`)
+      t.end()
+    })
+  })
+
+  sub.test('surrogate pairs', function (t) {
+    [
+      [0xd821, 0xdea0],
+      [0xd800, 0xdc00],
+      [0xd801, 0xdc01],
+      [0xddff, 0xdfff],
+      [0xd821, 0x0000],
+      [0xd821, 0xd821, 0xdea0]
+    ].forEach(function (bytes, index) {
+      const str = String.fromCharCode(...bytes)
+      const buf = new Uint8Array(bytelength(str))
+      const check = Buffer.from(str)
+      t.equal(buf.length, check.length)
+      write(buf, str, 0)
+      t.equal(toHex(buf, 0, buf.length), check.toString('hex'), `#${index} [${bytes}].toHex() ... ${check.toString('hex')}`)
+      t.equal(toUtf8(buf, 0, buf.length), check.toString(), `#${index} [${bytes}].toUtf8`)
+    })
+    t.end()
+  })
+
+  sub.test('all code points', function (t) {
+    const blockSize = 2048
+    const blocks = 65536 / blockSize
+    let code = 0
+    for (let block = 0; block < blocks; block += 1) {
+      const expected = {}
+      const actual = {}
+      for (let i = 0; i < blockSize; i += 1, code += 1) {
+        const str = String.fromCharCode(code)
+        const buf = new Uint8Array(bytelength(str))
+        write(buf, str, 0)
+        const exp = Buffer.from(str)
+        expected[code] = exp.toString('hex')
+        actual[code] = toHex(buf, 0, buf.length)
+      }
+      t.same(actual, expected)
+    }
+    t.end()
+  })
+})
+
 function testEncoder (t, rpacket, val) {
   const buf = rpacket.encode(val)
   const val2 = rpacket.decode(buf)
@@ -711,7 +783,7 @@ function testEncoder (t, rpacket, val) {
 }
 
 function compare (t, a, b) {
-  if (Buffer.isBuffer(a)) return a.toString('hex') === b.toString('hex')
+  if (a instanceof Uint8Array) return toHex(a, 0, a.length) === toHex(b, 0, b.length)
   if (typeof a === 'object' && a && b) {
     const keys = Object.keys(a)
     for (let i = 0; i < keys.length; i++) {

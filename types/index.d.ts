@@ -1,17 +1,14 @@
-/// <reference types="node" />
+import { RecordType } from '../types.js';
+import { RecordClass } from '../rcodes.js';
+import { OptionCodes } from '../optioncodes.js';
 
-import { RecordType } from '@leichtgewicht/dns-packet/types.js';
-import { RecordClass } from '@leichtgewicht/dns-packet/rcodes.js';
-import { OptionCodes } from '@leichtgewicht/dns-packet/optioncodes.js';
-import { Buffer } from 'buffer';
-
-export { RecordType } from '@leichtgewicht/dns-packet/types.js';
-export { RecordClass } from '@leichtgewicht/dns-packet/rcodes.js';
-export { OptionCodes } from '@leichtgewicht/dns-packet/optioncodes.js';
+export { RecordType } from '../types.js';
+export { RecordClass } from '../rcodes.js';
+export { OptionCodes } from '../optioncodes.js';
 
 export interface Codec <Type> {
-  encode(package: Type, buf?: Buffer, offset?: number): Buffer;
-  decode(buf: Buffer, offset?: number): Type;
+  encode(package: Type, buf?: Uint8Array, offset?: number): Uint8Array;
+  decode(buf: Uint8Array, offset?: number): Type;
   encodingLength(packet: Type): number;
 }
 
@@ -43,7 +40,7 @@ export interface SoaData {
  minimum?: number | undefined;
 }
 
-export type TxtData = string | Buffer | Array<string | Buffer>;
+export type TxtData = string | Uint8Array | Array<string | Uint8Array>;
 
 export interface CaaData {
  issuerCritical?: boolean | undefined;
@@ -66,14 +63,14 @@ export interface BaseAnswer<T, D> {
 }
 
 /**
-* Record types for which the library will provide a string in the data field.
-*/
+ * Record types for which the library will provide a string in the data field.
+ */
 export type StringRecordType = "A" | "AAAA" | "CNAME" | "DNAME" | "NS" | "PTR";
 
 /**
-* Record types for which the library does not attempt to process the data
-* field.
-*/
+ * Record types for which the library does not attempt to process the data
+ * field.
+ */
 export type OtherRecordType =
  | "AFSDB"
  | "APL"
@@ -106,7 +103,7 @@ export type SoaAnswer = BaseAnswer<"SOA", SoaData>;
 export type TxtAnswer = BaseAnswer<"TXT", TxtData>;
 export type CaaAnswer = BaseAnswer<"CAA", CaaData>;
 export type MxAnswer = BaseAnswer<"MX", MxData>;
-export type NullAnswer = BaseAnswer<"NULL", Buffer>;
+export type NullAnswer = BaseAnswer<"NULL", Uint8Array>;
 export type OptAnswer = BaseAnswer<"OPT", OptionData[]>;
 export type DNSKeyAnswer = BaseAnswer<"DNSKEY", DNSKeyData>;
 export type RRSigAnswer = BaseAnswer<"RRSIG", RRSigData>;
@@ -114,7 +111,7 @@ export type RPAnswer = BaseAnswer<"RP", RPData>;
 export type NSecAnswer = BaseAnswer<"NSEC", NSecData>;
 export type NSec3Answer = BaseAnswer<"NSEC3", NSec3Data>;
 export type DSAnswer = BaseAnswer<"DS", DigestData>;
-export type BufferAnswer = BaseAnswer<OtherRecordType, Buffer>;
+export type BufferAnswer = BaseAnswer<OtherRecordType, Uint8Array>;
 
 export type Answer =
  | StringAnswer
@@ -169,34 +166,34 @@ export const AUTHENTIC_DATA: 32;
 export const CHECKING_DISABLED: 16;
 
 export interface DNSKeyData {
-  key: string
-  flags: number
-  algorithm: number
+  key: string;
+  flags: number;
+  algorithm: number;
 }
 export interface DigestData {
-  digest: Buffer
-  keyTag: number
-  algorithm: number
-  digestType: number
+  digest: Uint8Array;
+  keyTag: number;
+  algorithm: number;
+  digestType: number;
 }
 
 export interface NSecData {
-  nextDomain: Buffer
-  rrtypes: RecordType[]
+  nextDomain: Uint8Array;
+  rrtypes: RecordType[];
 }
 export interface NSec3Data {
-  salt: Buffer
-  nextDomain: Buffer
-  algorithm: number
-  flags: number
-  iterations: number
-  rrtypes: RecordType[]
+  salt: Uint8Array;
+  nextDomain: Uint8Array;
+  algorithm: number;
+  flags: number;
+  iterations: number;
+  rrtypes: RecordType[];
 }
 
 export type ACodec = Codec<string>;
-export type PtrCodec = Codec<Buffer>;
-export type TxtCodec = Codec<Buffer[]>;
-export type NullCodec = Codec<Buffer>;
+export type PtrCodec = Codec<Uint8Array>;
+export type TxtCodec = Codec<Uint8Array[]>;
+export type NullCodec = Codec<Uint8Array>;
 export type CaaCodec = Codec<string> & {
   ISSUER_CRITICAL: 128
 };
@@ -208,7 +205,7 @@ export type DNSKeyCodec = Codec<DNSKeyData> & {
 export type DSCodec = Codec<DigestData>;
 export type HInfoCodec = Codec<HInfoData>;
 export type AAAACodec = Codec<string>;
-export type UnknownCodec = Codec<Buffer>;
+export type UnknownCodec = Codec<Uint8Array>;
 export type SrvCodec = Codec<SrvData>;
 export type NSCodec = Codec<string>;
 export type SoaCodec = Codec<SoaData>;
@@ -223,7 +220,7 @@ export type PacketCodec = Codec<Packet>;
 
 export type SingleQuestionPacket = Omit<Packet, 'questions'> & {
   question: Question
-}
+};
 
 export type QueryCodec = Codec<SingleQuestionPacket>;
 export type ResponseCodec = Codec<SingleQuestionPacket>;
@@ -260,27 +257,27 @@ declare const rnull: NullCodec;
 export { rnull as null };
 
 export interface GenericOptionData {
-  code: OptionCodes
-  data: Buffer
+  code: OptionCodes;
+  data: Uint8Array;
 }
 export interface ClientSubnetOptionData {
-  code: 'CLIENT_SUBNET'
-  ip: string
-  family?: 1 | 2
-  sourcePrefixLength?: number
-  scopePrefixLength?: number
+  code: 'CLIENT_SUBNET';
+  ip: string;
+  family?: 1 | 2;
+  sourcePrefixLength?: number;
+  scopePrefixLength?: number;
 }
 export interface TCPKeepaliveOptionData {
-  code: 'TCP_KEEPALIVE'
-  timeout?: number
+  code: 'TCP_KEEPALIVE';
+  timeout?: number;
 }
 export interface PaddingOptionData {
-  code: 'PADDING'
-  length?: number
+  code: 'PADDING';
+  length?: number;
 }
 export interface KeyTagOptionData {
-  code: 'KEY_TAG'
-  tags: number[]
+  code: 'KEY_TAG';
+  tags: number[];
 }
 
 export type OptionData =
@@ -291,20 +288,20 @@ export type OptionData =
   | KeyTagOptionData;
 
 export interface RRSigData {
-  signature: Buffer
-  typeCovered: RecordType
-  algorithm: number
-  labels: number
-  originalTTL: number
-  expiration: number
-  inception: number
-  keyTag: number
-  signersName: string
+  signature: Uint8Array;
+  typeCovered: RecordType;
+  algorithm: number;
+  labels: number;
+  originalTTL: number;
+  expiration: number;
+  inception: number;
+  keyTag: number;
+  signersName: string;
 }
 
 export interface RPData {
-  mbox?: string
-  txt?: string
+  mbox?: string;
+  txt?: string;
 }
 
 export type AnyTypeCodec =
@@ -313,7 +310,7 @@ export type AnyTypeCodec =
   MxCodec | OptCodec | RRSigCodec | RPCodec | NSecCodec |
   NSec3Codec | DSCodec | UnknownCodec;
 
-export type TypeCodec <Type> = 
+export type TypeCodec <Type> =
   Type extends string ?
     Uppercase<Type> extends 'A' ? ACodec :
     Uppercase<Type> extends 'PTR' ? PtrCodec :
@@ -336,15 +333,15 @@ export type TypeCodec <Type> =
     Uppercase<Type> extends 'NSEC3' ? NSec3Codec :
     Uppercase<Type> extends 'DS' ? DSCodec :
     UnknownCodec
-  : AnyTypeCodec
+  : AnyTypeCodec;
 
-export function enc <Type> (type: Type): TypeCodec<Type>;
+export function enc <Type>(type: Type): TypeCodec<Type>;
 
-export function encode(packet: Packet, buf?: Buffer, offset?: number): Buffer;
-export function decode(buf: Buffer, offset?: number): Packet;
+export function encode(packet: Packet, buf?: Uint8Array, offset?: number): Uint8Array;
+export function decode(buf: Uint8Array, offset?: number): Packet;
 export function encodingLength(packet: Packet): number;
-export function decodeList<T=any>(list: T[], codec: Codec<T>, buf: Buffer, offset?: number): Packet[];
-export function encodeList<T=any>(list: T[], codec: Codec<T>, buf?: Buffer, offset?: number): number;
-export function encodingLengthList<T=any>(list: T[], codec: Codec<T>): number
-export function streamDecode(buffer: Buffer): Packet | null
-export function streamEncode(packet: Packet): Buffer
+export function decodeList <T= any>(list: T[], codec: Codec<T>, buf: Uint8Array, offset?: number): Packet[];
+export function encodeList <T= any>(list: T[], codec: Codec<T>, buf?: Uint8Array, offset?: number): number;
+export function encodingLengthList <T= any>(list: T[], codec: Codec<T>): number;
+export function streamDecode(buffer: Uint8Array): Packet | null;
+export function streamEncode(packet: Packet): Uint8Array;

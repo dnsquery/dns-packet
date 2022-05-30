@@ -1,6 +1,6 @@
+/* tslint:disable:no-duplicate-imports */
 import * as dnsPacket from '@leichtgewicht/dns-packet';
 import { Codec, UnknownCodec } from '@leichtgewicht/dns-packet';
-import { Buffer } from 'buffer';
 
 dnsPacket.decode(dnsPacket.encode({
   id: 1,
@@ -60,12 +60,12 @@ const codec: Array<Codec<any>> = [
   dnsPacket.unknown
 ];
 
-const unknownCodecs: Array<UnknownCodec> = [
+const unknownCodecs: UnknownCodec[] = [
   dnsPacket.unknown,
   dnsPacket.enc('hello')
 ];
 
-const decoded = dnsPacket.decode(Buffer.from('abcd'));
-const decodedList = dnsPacket.decodeList([], dnsPacket.a, Buffer.alloc(0));
-dnsPacket.streamDecode(Buffer.alloc(0));
-const buff: Buffer = dnsPacket.streamEncode({});
+dnsPacket.decode(new Uint8Array([])); // $ExpectType Packet
+dnsPacket.decodeList([], dnsPacket.a, new Uint8Array(0)); // $ExpectType Packet[]
+dnsPacket.streamDecode(new Uint8Array(0)); // $ExpectType Packet | null
+dnsPacket.streamEncode({}); // $ExpectType Uint8Array
