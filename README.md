@@ -1,7 +1,12 @@
-# dns-packet
+# @leichtgewicht/dns-packet
 [![](https://img.shields.io/npm/v/@leichtgewicht/dns-packet.svg?style=flat)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![](https://img.shields.io/npm/dm/@leichtgewicht/dns-packet.svg)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![Tests](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml/badge.svg)](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml)
 
 An [abstract-encoding](https://github.com/mafintosh/abstract-encoding) compliant module for encoding / decoding DNS packets. Lifted out of [multicast-dns](https://github.com/mafintosh/multicast-dns) as a separate module.
+
+**This is a fork** of [dns-packet][] that comes with typescript types, javascript modules and does
+not use Node.js primitives. Works well in browsers/react-native.
+
+[dns-packet]: https://github.com/mafintosh/dns-packet
 
 ```
 npm install @leichtgewicht/dns-packet
