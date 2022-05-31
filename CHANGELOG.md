@@ -1,9 +1,14 @@
-# Version 5.4.0 - 2022-06-27
+# Version 6.0.0 - 2022-05-31
+
+- Breaking: Node.js Buffer is not used by the library anymore and Uint8Array instances will be returned
+    by default instead of it.
+
+# Version 5.4.0 - 2022-05-27
 
 - Feature: Adding dedicated packet codec
 - Feature: Adding dedicated query/response codec as multiple queries are only theoretically supported.
 
-# Version 5.3.0 - 2022-06-22
+# Version 5.3.0 - 2022-05-22
 
 - Refactor: ESM module support
 
