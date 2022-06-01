@@ -1,10 +1,12 @@
 import { RecordType } from '../types.js';
 import { RecordClass } from '../rcodes.js';
 import { OptionCodes } from '../optioncodes.js';
+import { OPCode } from '../opcodes.js';
 
 export { RecordType } from '../types.js';
 export { RecordClass } from '../rcodes.js';
 export { OptionCodes } from '../optioncodes.js';
+export { OPCode } from '../opcodes.js';
 
 export interface Codec <Type> {
   encode(package: Type, buf?: Uint8Array, offset?: number): Uint8Array;
@@ -132,29 +134,39 @@ export type Answer =
  | BufferAnswer;
 
 export interface Packet {
- /**
-  * Whether the packet is a query or a response. This field may be
-  * omitted if it is clear from the context of usage what type of packet
-  * it is.
-  */
- type?: "query" | "response" | undefined;
+  /**
+   * Whether the packet is a query or a response. This field may be
+   * omitted if it is clear from the context of usage what type of packet
+   * it is.
+   */
+  type?: "query" | "response" | undefined;
 
- id?: number | undefined;
+  id?: number | undefined;
 
- /**
-  * A bit-mask combination of zero or more of:
-  * {@link AUTHORITATIVE_ANSWER},
-  * {@link TRUNCATED_RESPONSE},
-  * {@link RECURSION_DESIRED},
-  * {@link RECURSION_AVAILABLE},
-  * {@link AUTHENTIC_DATA},
-  * {@link CHECKING_DISABLED}.
-  */
- flags?: number | undefined;
- questions?: Question[] | undefined;
- answers?: Answer[] | undefined;
- additionals?: Answer[] | undefined;
- authorities?: Answer[] | undefined;
+  /**
+   * A bit-mask combination of zero or more of:
+   * {@link AUTHORITATIVE_ANSWER},
+   * {@link TRUNCATED_RESPONSE},
+   * {@link RECURSION_DESIRED},
+   * {@link RECURSION_AVAILABLE},
+   * {@link AUTHENTIC_DATA},
+   * {@link CHECKING_DISABLED}.
+   */
+  flags?: number | undefined;
+  questions?: Question[] | undefined;
+  answers?: Answer[] | undefined;
+  additionals?: Answer[] | undefined;
+  authorities?: Answer[] | undefined;
+  flag_qr?: boolean;
+  opcode?: OPCode;
+  flag_aa?: boolean;
+  flag_tc?: boolean;
+  flag_rd?: boolean;
+  flag_ra?: boolean;
+  flag_z?: boolean;
+  flag_ad?: boolean;
+  flag_cd?: boolean;
+  rcode?: RecordClass;
 }
 
 export const DNSSEC_OK: 32768;
