@@ -45,6 +45,7 @@ const codec: Array<Codec<any>> = [
   dnsPacket.mx,
   dnsPacket.name,
   dnsPacket.ns,
+  dnsPacket.sshfp,
   dnsPacket.nsec,
   dnsPacket.nsec3,
   dnsPacket.null,

@@ -1166,6 +1166,57 @@ const rds = codec({
   }
 })
 
+const rsshfp = codec({
+  encode (record, buf, offset) {
+    if (!buf) buf = new Uint8Array(rsshfp.encodingLength(record))
+    if (!offset) offset = 0
+    const oldOffset = offset
+
+    offset += 2 // The function call starts with the offset pointer at the RDLENGTH field, not the RDATA one
+    buf[offset] = record.algorithm
+    offset += 1
+    buf[offset] = record.hash
+    offset += 1
+
+    const fingerprintLength = b.hexLength(record.fingerprint)
+    const expectedLength = getFingerprintLengthForHashType(record.hash)
+    if (fingerprintLength !== expectedLength) {
+      throw new Error(`Invalid length of fingerprint "${record.fingerprint}" for hashType=${record.hash}: ${fingerprintLength} != ${expectedLength}`)
+    }
+    b.writeHex(buf, record.fingerprint, offset, offset += fingerprintLength)
+    rsshfp.encode.bytes = offset - oldOffset
+    b.writeUInt16BE(buf, rsshfp.encode.bytes - 2, oldOffset)
+
+    return buf
+  },
+  decode (buf, offset) {
+    if (!offset) offset = 0
+    const oldOffset = offset
+
+    const record = {}
+    offset += 2 // Account for the RDLENGTH field
+    record.algorithm = buf[offset]
+    offset += 1
+    record.hash = buf[offset]
+    offset += 1
+
+    const fingerprintLength = getFingerprintLengthForHashType(record.hash)
+    record.fingerprint = b.toHex(buf, offset, offset + fingerprintLength)
+    offset += fingerprintLength
+    rsshfp.decode.bytes = offset - oldOffset
+    return record
+  },
+  encodingLength (record) {
+    return 4 + b.hexLength(record.fingerprint)
+  }
+})
+function getFingerprintLengthForHashType (hashType) {
+  if (hashType === 1) return 20
+  if (hashType === 2) return 32
+  throw new Error(`Invalid hashType=${hashType}, supported=1,2`)
+}
+rsshfp.getFingerprintLengthForHashType = getFingerprintLengthForHashType
+
 function renc (type) {
   switch (type.toUpperCase()) {
     case 'A': return ra
@@ -1187,6 +1238,7 @@ function renc (type) {
     case 'RP': return rrp
     case 'NSEC': return rnsec
     case 'NSEC3': return rnsec3
+    case 'SSHFP': return rsshfp
     case 'DS': return rds
   }
   return runknown
@@ -1337,6 +1389,7 @@ export {
   rnsec as nsec,
   rnsec3 as nsec3,
   rds as ds,
+  rsshfp as sshfp,
   renc as enc
 }
 

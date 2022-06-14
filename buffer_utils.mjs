@@ -24,14 +24,47 @@ export function write (arr, str, start) {
   return utf8.encode.bytes
 }
 
+const hexNum = {}
+const numHex = new Array(0xff)
+for (let b0 = 0; b0 <= 0xf; b0 += 1) {
+  const b0L = b0.toString(16)
+  const b0U = b0L.toUpperCase()
+  for (let b1 = 0; b1 <= 0xf; b1 += 1) {
+    const b1L = b1.toString(16)
+    const b1U = b1L.toUpperCase()
+    const num = b0 << 4 | b1
+    const hex = `${b0L}${b1L}`
+    numHex[num] = hex
+    hexNum[hex] = num
+    hexNum[`${b0U}${b1L}`] = num
+    hexNum[`${b0L}${b1U}`] = num
+    hexNum[`${b0U}${b1U}`] = num
+  }
+}
+
 export function toHex (buf, start, end) {
   let result = ''
   for (let offset = start; offset < end;) {
     const num = buf[offset++]
-    const str = num.toString(16)
-    result += (str.length === 1) ? '0' + str : str
+    result += numHex[num]
   }
   return result
+}
+
+export function hexLength (string) {
+  return string.length >>> 1
+}
+
+export function writeHex (buf, string, offset, end) {
+  let i = 0
+  while (offset < end) {
+    const hex = string.substr(i, 2)
+    const num = hexNum[hex]
+    if (num === undefined) return
+    buf[offset++] = num
+    i += 2
+  }
+  return buf
 }
 
 const P_24 = Math.pow(2, 24)

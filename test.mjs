@@ -4,7 +4,7 @@ import * as rcodes from './rcodes.mjs'
 import * as opcodes from './opcodes.mjs'
 import * as optioncodes from './optioncodes.mjs'
 import { decode as toUtf8 } from 'utf8-codec'
-import { write, toHex, bytelength } from './buffer_utils.mjs'
+import { write, toHex, bytelength, writeHex, hexLength } from './buffer_utils.mjs'
 
 tape('unknown', function (t) {
   testEncoder(t, packet.unknown, Buffer.from('hello world'))
@@ -103,6 +103,20 @@ tape('soa', function (t) {
     retry: 3600,
     expire: 604800,
     minimum: 3600
+  })
+  t.end()
+})
+
+tape('sshfp', function (t) {
+  testEncoder(t, packet.sshfp, {
+    algorithm: 1,
+    hash: 1,
+    fingerprint: 'a108c9f834354d5b37af988141c9294822f5bc00'
+  })
+  testEncoder(t, packet.sshfp, {
+    algorithm: 1,
+    hash: 2,
+    fingerprint: 'a108c9f834354d5b37af988141c9294822f5bc00afa0dfafa2dfa1dfafa5dfa1'
   })
   t.end()
 })
@@ -686,8 +700,8 @@ tape('single query -> response encoding', function (t) {
 })
 
 test('buffer utf8', function (sub) {
-  [
-    '', // empty
+  for (const [index, fixture] of [
+    // '', // empty
     'basic: hi',
     'japanese: 日本語',
     'mixed: 日本語 hi',
@@ -701,18 +715,20 @@ test('buffer utf8', function (sub) {
     'odd 3 byte: \xa158',
     'max 3 byte: \xffff',
     `4 byte: ${String.fromCodePoint(100000)}`
-  ].forEach((fixture, index) => {
+  ].entries()) {
     sub.test(`fixture #${index}`, t => {
       const check = Buffer.from(fixture)
+      const checkHex = check.toString('hex')
       const len = check.length
       t.equals(bytelength(fixture), len, `fixture ${fixture} length`)
       const buf = new Uint8Array(len)
       t.equals(write(buf, fixture, 0), len, 'write.num')
-      t.equals(toHex(buf, 0, len), check.toString('hex'), `write: ${fixture}`)
+      t.equals(toHex(buf, 0, len), checkHex, `write: ${fixture}`)
+      t.equals(check.compare(writeHex(buf, checkHex, 0, hexLength(checkHex))), 0)
       t.equals(toUtf8(check, 0, check.length), check.toString(), `toUtf8: ${fixture}`)
       t.end()
     })
-  })
+  }
 
   sub.test('surrogate pairs', function (t) {
     [

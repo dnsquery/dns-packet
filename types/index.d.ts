@@ -188,6 +188,14 @@ export interface DigestData {
   algorithm: number;
   digestType: number;
 }
+export type SSHFPFingerPrintLength = 20 | 32;
+export type SSHFPHash = 1 | 2;
+export type SSHFPFingerPrintLengthFor <T extends SSHFPHash> = T extends 1 ? 20 : 32;
+export interface SSHFP {
+  algorithm: number;
+  hash: SSHFPHash;
+  fingerprint: string;
+}
 
 export interface NSecData {
   nextDomain: Uint8Array;
@@ -215,6 +223,9 @@ export type DNSKeyCodec = Codec<DNSKeyData> & {
   SECURE_ENTRYPOINT: 0x8000
 };
 export type DSCodec = Codec<DigestData>;
+export type SSHFPCodec = Codec<SSHFP> & {
+  getFingerprintLengthForHashType(hashType: SSHFPHash): SSHFPFingerPrintLength;
+};
 export type HInfoCodec = Codec<HInfoData>;
 export type AAAACodec = Codec<string>;
 export type UnknownCodec = Codec<Uint8Array>;
@@ -244,6 +255,7 @@ export const cname: PtrCodec;
 export const dname: PtrCodec;
 export const dnskey: DNSKeyCodec;
 export const ds: DSCodec;
+export const sshfp: SSHFPCodec;
 export const hinfo: HInfoCodec;
 export const aaaa: AAAACodec;
 export const answer: Codec<Answer>;
