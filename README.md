@@ -309,6 +309,16 @@ The options `PADDING`, `CLIENT_SUBNET`, `TCP_KEEPALIVE` and `KEY_TAG` support en
 }
 ```
 
+#### `SSHFP`
+
+``` js
+{
+  algorithm: 1,
+  hash: 1,
+  fingerprint: 'A108C9F834354D5B37AF988141C9294822F5BC00'
+}
+````
+
 #### `RRSIG`
 
 ``` js
