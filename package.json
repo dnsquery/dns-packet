@@ -59,11 +59,7 @@
   },
   "dependencies": {
     "@leichtgewicht/ip-codec": "^2.0.4",
-    "bytes.js": "^0.0.2",
-    "utf8-bytes": "^0.0.1",
-    "utf8-codec": "^1.0.0",
-    "utf8-length": "^0.0.1",
-    "utf8-string-bytes": "^1.0.3"
+    "utf8-codec": "^1.0.0"
   },
   "devDependencies": {
     "@definitelytyped/dtslint": "^0.0.112",
