@@ -724,7 +724,7 @@ test('buffer utf8', function (sub) {
       const buf = new Uint8Array(len)
       t.equals(write(buf, fixture, 0), len, 'write.num')
       t.equals(toHex(buf, 0, len), checkHex, `write: ${fixture}`)
-      t.equals(check.compare(writeHex(buf, checkHex, 0, hexLength(checkHex))), 0)
+      t.equals(check.compare(Buffer.from(writeHex(buf, checkHex, 0, hexLength(checkHex)))), 0)
       t.equals(toUtf8(check, 0, check.length), check.toString(), `toUtf8: ${fixture}`)
       t.end()
     })
