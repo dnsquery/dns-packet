@@ -1,5 +1,5 @@
-# @leichtgewicht/dns-packet
-[![](https://img.shields.io/npm/v/@leichtgewicht/dns-packet.svg?style=flat)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![](https://img.shields.io/npm/dm/@leichtgewicht/dns-packet.svg)](https://www.npmjs.org/package/@leichtgewicht/dns-packet) [![Tests](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml/badge.svg)](https://github.com/martinheidegger/dns-packet/actions/workflows/test.yml)
+# @dnsquery/dns-packet
+[![](https://img.shields.io/npm/v/@dnsquery/dns-packet.svg?style=flat)](https://www.npmjs.org/package/@dnsquery/dns-packet) [![](https://img.shields.io/npm/dm/@dnsquery/dns-packet.svg)](https://www.npmjs.org/package/@dnsquery/dns-packet) [![Tests](https://github.com/dnsquery/dns-packet/actions/workflows/test.yml/badge.svg)](https://github.com/dnsquery/dns-packet/actions/workflows/test.yml)
 
 An [abstract-encoding](https://github.com/mafintosh/abstract-encoding) compliant module for encoding / decoding DNS packets. Lifted out of [multicast-dns](https://github.com/mafintosh/multicast-dns) as a separate module.
 
@@ -9,13 +9,13 @@ not use Node.js primitives. Works well in browsers/react-native.
 [dns-packet]: https://github.com/mafintosh/dns-packet
 
 ```
-npm install @leichtgewicht/dns-packet
+npm install @dnsquery/dns-packet
 ```
 
 ## UDP Usage
 
 ``` js
-import * as dnsPacket from '@leichtgewicht/dns-packet'
+import * as dnsPacket from '@dnsquery/dns-packet'
 import dgram from 'dgram'
 
 const socket = dgram.createSocket('udp4')
@@ -95,7 +95,7 @@ import {
   AUTHORITATIVE_ANSWER,
   AUTHENTIC_DATA,
   CHECKING_DISABLED
-} from '@leichtgewicht/dns-packet'
+} from '@dnsquery/dns-packet'
 ```
 
 To use more than one flag bitwise-or them together
